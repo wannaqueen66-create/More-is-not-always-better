@@ -1,0 +1,6 @@
+Recording Time Stamp[ms],Gaze Point X[px],Gaze Point Y[px],Fixation Index,Fixation Duration[ms]
+2000,55,55,1,800
+3000,65,65,1,800
+4000,155,55,2,1200
+5000,165,65,2,1200
+6000,10,10,3,600

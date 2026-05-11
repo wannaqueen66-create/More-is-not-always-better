@@ -1,0 +1,46 @@
+{
+  "Recording Time Stamp[ms]": [
+    "Recording Time Stamp[ms]",
+    "Recording Timestamp[ms]",
+    "RecordingTimeStamp[ms]",
+    "timestamp_ms",
+    "time_ms",
+    "t_ms"
+  ],
+  "Gaze Point X[px]": [
+    "Gaze Point X[px]",
+    "GazePointX[px]",
+    "Gaze X[px]",
+    "x",
+    "X"
+  ],
+  "Gaze Point Y[px]": [
+    "Gaze Point Y[px]",
+    "GazePointY[px]",
+    "Gaze Y[px]",
+    "y",
+    "Y"
+  ],
+  "Validity Left": [
+    "Validity Left",
+    "ValidityLeft",
+    "Validity (Left)",
+    "validity_left"
+  ],
+  "Validity Right": [
+    "Validity Right",
+    "ValidityRight",
+    "Validity (Right)",
+    "validity_right"
+  ],
+  "Fixation Index": [
+    "Fixation Index",
+    "FixationIndex",
+    "fixation_index"
+  ],
+  "Fixation Duration[ms]": [
+    "Fixation Duration[ms]",
+    "FixationDuration[ms]",
+    "fixation_duration_ms"
+  ]
+}

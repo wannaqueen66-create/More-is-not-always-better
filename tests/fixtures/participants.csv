@@ -1,0 +1,2 @@
+participant_id,eeg_subject_id,eye_subject_id,SportFreq,Experience,Order,exclude
+P01,E01,Eye01,High,Low,1,false

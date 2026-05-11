@@ -1,0 +1,2 @@
+participant_id,scene_id,block,position,scene_name,eye_csv_path,aoi_json_path,WWR,Cond,Complexity,eye_offset_ms
+P001,1,1,1,scene_01,data/raw/eye/P001_scene01.csv,data/raw/aoi/scene_01_aoi.json,0.2,A,1,0
