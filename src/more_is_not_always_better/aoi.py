@@ -211,6 +211,62 @@ def compute_timebin_metrics(
     return pd.DataFrame(rows)
 
 
+def compute_whole_scene_metrics(
+    df: pd.DataFrame,
+    dwell_mode: str = "fixation",
+    class_name: str = "whole_scene",
+) -> pd.DataFrame:
+    """Compute one scene-level eye row when AOI polygons are not available."""
+    _require_eye_columns(df)
+    t = pd.to_numeric(df["Recording Time Stamp[ms]"], errors="coerce")
+    t0 = float(t.min()) if t.notna().any() else np.nan
+    row = _metric_row(
+        df,
+        t0,
+        class_name,
+        dwell_mode,
+        {
+            "polygon_count": 0,
+            "samples": int(len(df)),
+            "aoi_available": False,
+        },
+    )
+    if pd.notna(t0):
+        row["TTFF_ms"] = 0.0
+    return pd.DataFrame([row])
+
+
+def compute_whole_scene_timebin_metrics(
+    df: pd.DataFrame,
+    bin_size_ms: int = 2000,
+    eye_offset_ms: float = 0.0,
+    dwell_mode: str = "fixation",
+    class_name: str = "whole_scene",
+) -> pd.DataFrame:
+    """Compute per-bin eye rows without AOI polygons."""
+    _require_eye_columns(df)
+    if bin_size_ms <= 0:
+        raise ValueError("bin_size_ms must be positive")
+    out = df.copy()
+    t = pd.to_numeric(out["Recording Time Stamp[ms]"], errors="coerce")
+    if not t.notna().any():
+        return pd.DataFrame()
+    aligned_ms = t - t.min() + float(eye_offset_ms or 0.0)
+    out["eye_aligned_ms"] = aligned_ms
+    out["bin_index"] = np.floor(aligned_ms / bin_size_ms).astype("Int64")
+
+    rows: list[dict] = []
+    for bin_index, sub in out.dropna(subset=["bin_index"]).groupby("bin_index", sort=True):
+        bin_start_ms = int(bin_index) * bin_size_ms
+        bin_end_ms = bin_start_ms + bin_size_ms
+        class_df = compute_whole_scene_metrics(sub, dwell_mode=dwell_mode, class_name=class_name)
+        class_df.insert(0, "bin_end_ms", bin_end_ms)
+        class_df.insert(0, "bin_start_ms", bin_start_ms)
+        class_df.insert(0, "bin_index", int(bin_index))
+        rows.extend(class_df.to_dict("records"))
+    return pd.DataFrame(rows)
+
+
 def eye_file_stats(df: pd.DataFrame, eye_offset_ms: float = 0.0, bin_size_ms: int = 2000) -> dict:
     if "Recording Time Stamp[ms]" not in df.columns:
         return {

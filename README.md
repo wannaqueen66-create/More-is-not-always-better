@@ -2,7 +2,7 @@
 
 Independent fusion pipeline for scene-level and time-bin aligned EEG + eye-tracking analysis.
 
-This repository is designed to stand alone from the original source repositories:
+This repository runs independently. The earlier repositories are historical references only, not runtime dependencies:
 
 - Eye-tracking source reference: https://github.com/wannaqueen66-create/eyetrack
 - EEG source reference: https://github.com/wannaqueen66-create/eeg
@@ -19,10 +19,13 @@ manifests/
   participants.csv              Participant/group mapping template.
   scene_manifest.csv            Scene/order/file mapping template.
 scripts/
+  build_manifests.py            Scan raw roots and create manifests.
   run_eye_aoi_batch.py          Compute eye AOI metrics from scene CSVs.
+  run_end_to_end.py             Orchestrate raw-root to fusion outputs.
   run_fusion.py                 Build aligned scene, time-bin, and sync-QC tables.
 src/more_is_not_always_better/
   aoi.py                        AOI loading and polygon metrics.
+  discovery.py                  Raw-root scanning and manifest builders.
   eye_batch.py                  Batch eye-tracking AOI runner.
   fusion.py                     EEG + eye fusion and synchronization QC.
 matlab/
@@ -67,6 +70,36 @@ Install dependencies:
 python -m pip install -r requirements.txt
 ```
 
+## End-To-End Raw Inputs
+
+The repository can now run from the real raw input roots:
+
+```text
+Eye-tracking scenes: E:\2.7眼动数据\映射
+EEG EEGLAB files:   E:\eeg原始文件
+```
+
+EEG raw input is `.set/.fdt` pairs. The MATLAB step reads those files with EEGLAB and exports `outputs/eeg/summary/all_subjects_scene_level.csv`:
+
+```bash
+matlab -batch "addpath('matlab'); run_eeg_bandpower_from_set('E:/eeg原始文件', 'outputs/eeg'); exit"
+```
+
+Inspect the real roots without running the full dataset:
+
+```bash
+python scripts/build_manifests.py --dry_run
+python scripts/run_end_to_end.py --dry_run
+```
+
+Generate manifests when ready:
+
+```bash
+python scripts/build_manifests.py
+```
+
+If an eye export uses the wrong subject label, provide a manual alias table with `--eye_alias_csv`. Automatic record-id based aliasing is also available for generic labels such as `User1`, but no dataset-specific hard-coded alias is required.
+
 Compute eye-tracking AOI metrics:
 
 ```bash
@@ -105,6 +138,8 @@ eye_aligned_ms = eye_timestamp_ms - min(eye_timestamp_ms) + eye_offset_ms
 The aligned `0 ms` point is interpreted as the EEG scene-viewing start, i.e. the EEG marker transition `7 -> 8`.
 
 Default time bins are non-overlapping `2000 ms` bins, matching the EEG pipeline's 2-second Welch window convention. The current time-bin output computes eye AOI metrics per bin and attaches the corresponding scene-level EEG columns to every bin. If a future EEG export provides true per-bin bandpower, that file can be joined on the same `participant_id + scene_id + bin_start_ms`.
+
+If `aoi_json_path` is blank or missing, the eye pipeline still emits a `whole_scene` class row with dwell, fixation count, TTFF, sample count, and per-bin whole-scene metrics. When AOI JSON files are added later, the same manifest column enables AOI class metrics automatically.
 
 ## Synchronization QC
 

@@ -3,6 +3,7 @@
 __all__ = [
     "aoi",
     "columns",
+    "discovery",
     "eye_batch",
     "filters",
     "fusion",

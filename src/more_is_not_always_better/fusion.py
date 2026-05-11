@@ -6,7 +6,12 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from .aoi import compute_timebin_metrics, eye_file_stats, load_aoi_json
+from .aoi import (
+    compute_timebin_metrics,
+    compute_whole_scene_timebin_metrics,
+    eye_file_stats,
+    load_aoi_json,
+)
 from .columns import load_columns_map, rename_df_columns_inplace
 from .filters import filter_by_screen_and_validity
 from .io import (
@@ -83,8 +88,10 @@ def run_fusion(
 
 def load_scene_manifest(path: str | Path, participants: pd.DataFrame) -> pd.DataFrame:
     manifest = read_csv(path)
-    required = {"participant_id", "scene_id", "eye_csv_path", "aoi_json_path"}
+    required = {"participant_id", "scene_id", "eye_csv_path"}
     assert_required_columns(manifest, required, "scene_manifest.csv")
+    if "aoi_json_path" not in manifest.columns:
+        manifest["aoi_json_path"] = ""
     manifest = manifest.copy()
     manifest["participant_id"] = manifest["participant_id"].astype(str).str.strip()
     manifest["scene_id"] = pd.to_numeric(manifest["scene_id"], errors="coerce").astype("Int64")
@@ -212,20 +219,28 @@ def build_aligned_timebin_table(
 
     for _, row in scene_plus.iterrows():
         eye_csv = resolve_path(row["eye_csv_path"], manifest_base)
-        aoi_json = resolve_path(row["aoi_json_path"], manifest_base)
-        if not eye_csv or not eye_csv.exists() or not aoi_json or not aoi_json.exists():
+        aoi_json = resolve_path(row.get("aoi_json_path"), manifest_base)
+        if not eye_csv or not eye_csv.exists():
             continue
         df = read_csv(eye_csv)
         rename_df_columns_inplace(df, cmap)
         df = filter_by_screen_and_validity(df, screen_w, screen_h, require_validity)
-        aois = load_aoi_json(aoi_json)
-        timebin = compute_timebin_metrics(
-            df,
-            aois,
-            bin_size_ms=bin_size_ms,
-            eye_offset_ms=_number_or_default(row.get("eye_offset_ms"), 0.0),
-            dwell_mode=dwell_mode,
-        )
+        if aoi_json and aoi_json.exists():
+            aois = load_aoi_json(aoi_json)
+            timebin = compute_timebin_metrics(
+                df,
+                aois,
+                bin_size_ms=bin_size_ms,
+                eye_offset_ms=_number_or_default(row.get("eye_offset_ms"), 0.0),
+                dwell_mode=dwell_mode,
+            )
+        else:
+            timebin = compute_whole_scene_timebin_metrics(
+                df,
+                bin_size_ms=bin_size_ms,
+                eye_offset_ms=_number_or_default(row.get("eye_offset_ms"), 0.0),
+                dwell_mode=dwell_mode,
+            )
         if timebin.empty:
             continue
         timebin.insert(0, "scene_id", int(row["scene_id"]))

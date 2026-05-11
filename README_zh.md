@@ -1,6 +1,6 @@
 # More Is Not Always Better：EEG + 眼动融合项目
 
-本仓库用于把 EEG 场景级频段功率结果与眼动场景 CSV/AOI 指标合并成一个可直接写论文、建模和出图的独立项目。原始参考仓库为：
+本仓库用于把 EEG 场景级频段功率结果与眼动场景 CSV/AOI 指标合并成一个可直接写论文、建模和出图的独立项目。下面两个仓库只是历史参考，不是运行依赖：
 
 - 眼动：https://github.com/wannaqueen66-create/eyetrack
 - EEG：https://github.com/wannaqueen66-create/eeg
@@ -22,6 +22,43 @@ eye_aligned_ms = 眼动时间戳 - 该 CSV 最小时间戳 + eye_offset_ms
 - `outputs/fusion/aligned_scene_table.csv`：场景级 EEG + 眼动融合主表。
 - `outputs/fusion/aligned_timebin_table.csv`：默认 2 秒非重叠 time-bin 的眼动 AOI 指标，并附加对应场景 EEG 指标。
 - `outputs/fusion/sync_qc.csv`：同步质量检查，包括 EEG view 时长、眼动 CSV 时长、差值、样本数、bin 数、缺失和 mismatch 标记。
+
+## 端到端原始输入
+
+现在 EEG 原始输入是 `.set/.fdt` 成对文件，默认目录：
+
+```text
+E:\eeg原始文件
+```
+
+眼动输入是已经按场景拆分的 CSV，默认目录：
+
+```text
+E:\2.7眼动数据\映射
+```
+
+先只检查目录，不跑全量：
+
+```bash
+python scripts/build_manifests.py --dry_run
+python scripts/run_end_to_end.py --dry_run
+```
+
+生成 manifests：
+
+```bash
+python scripts/build_manifests.py
+```
+
+EEG 端到端导出场景级频段功率：
+
+```bash
+matlab -batch "addpath('matlab'); run_eeg_bandpower_from_set('E:/eeg原始文件', 'outputs/eeg'); exit"
+```
+
+如果后续发现眼动导出使用了错误被试名，可以用 `--eye_alias_csv` 提供手动别名表。脚本也保留了基于 record id 的通用自动别名机制，用于处理 `User1` 这类泛化标签，但没有任何针对某个被试的硬编码。
+
+如果 `aoi_json_path` 为空，眼动脚本不会中断，会输出 `whole_scene` 级别的基础眼动指标；之后补上 AOI JSON 后会自动输出 AOI class 指标。
 
 ## 推荐运行
 

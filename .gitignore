@@ -8,6 +8,7 @@ __pycache__/
 build/
 dist/
 outputs/
+manifests/generated/
 data/raw/
 data/interim/
 data/processed/

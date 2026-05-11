@@ -5,7 +5,7 @@ from typing import Optional
 
 import pandas as pd
 
-from .aoi import compute_metrics, eye_file_stats, load_aoi_json
+from .aoi import compute_metrics, compute_whole_scene_metrics, eye_file_stats, load_aoi_json
 from .columns import load_columns_map, rename_df_columns_inplace
 from .filters import filter_by_screen_and_validity
 from .io import (
@@ -33,13 +33,10 @@ def run_eye_aoi_batch(
     manifest_path = Path(scene_manifest_csv)
     manifest_base = manifest_path.parent
     scene_manifest = read_csv(manifest_path)
-    required = {
-        "participant_id",
-        "scene_id",
-        "eye_csv_path",
-        "aoi_json_path",
-    }
+    required = {"participant_id", "scene_id", "eye_csv_path"}
     assert_required_columns(scene_manifest, required, "scene_manifest.csv")
+    if "aoi_json_path" not in scene_manifest.columns:
+        scene_manifest["aoi_json_path"] = ""
     scene_manifest = scene_manifest.copy()
     scene_manifest["participant_id"] = scene_manifest["participant_id"].astype(str).str.strip()
     scene_manifest["scene_id"] = pd.to_numeric(scene_manifest["scene_id"], errors="coerce").astype("Int64")
@@ -66,17 +63,23 @@ def run_eye_aoi_batch(
             "missing_eye_file": not eye_csv or not eye_csv.exists(),
             "missing_aoi_file": not aoi_json or not aoi_json.exists(),
         }
-        if qc_base["missing_eye_file"] or qc_base["missing_aoi_file"]:
+        if qc_base["missing_eye_file"]:
             qc_rows.append(qc_base)
             continue
 
         df = read_csv(eye_csv)
         rename_df_columns_inplace(df, cmap)
         df = filter_by_screen_and_validity(df, screen_w, screen_h, require_validity)
-        aois = load_aoi_json(aoi_json)
-        poly_df, class_df = compute_metrics(df, aois, dwell_mode=dwell_mode)
+        if qc_base["missing_aoi_file"]:
+            poly_df = pd.DataFrame()
+            class_df = compute_whole_scene_metrics(df, dwell_mode=dwell_mode)
+        else:
+            aois = load_aoi_json(aoi_json)
+            poly_df, class_df = compute_metrics(df, aois, dwell_mode=dwell_mode)
 
         for output_df in (poly_df, class_df):
+            if output_df.empty:
+                continue
             output_df.insert(0, "scene_id", scene_id)
             output_df.insert(0, "participant_id", participant_id)
             _attach_optional_manifest_columns(output_df, row)
